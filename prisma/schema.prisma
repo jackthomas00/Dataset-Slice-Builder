@@ -1,0 +1,89 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Dataset {
+  id                   String   @id @default(cuid())
+  name                 String
+  source               String   @default("roboflow")
+  roboflowProjectId    String?  @map("roboflow_project_id")
+  workspaceId          String?  @map("workspace_id")
+  createdAt            DateTime @default(now()) @map("created_at")
+
+  images               Image[]
+  savedSlices          SavedSlice[]
+
+  @@map("dataset")
+}
+
+model Image {
+  id               String   @id @default(cuid())
+  datasetId        String   @map("dataset_id")
+  roboflowImageId  String?  @map("roboflow_image_id")
+  url              String
+  width            Int?
+  height           Int?
+  capturedAt       DateTime? @map("captured_at")
+  hourOfDay        Int?     @map("hour_of_day") // 0-23, for time-of-day filter
+  gpsLat           Float?   @map("gps_lat")
+  gpsLng           Float?   @map("gps_lng")
+  split            String?  // train, valid, test
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  dataset          Dataset  @relation(fields: [datasetId], references: [id], onDelete: Cascade)
+  tags             ImageTag[]
+  annotationSummary AnnotationSummary?
+
+  @@index([datasetId, capturedAt])
+  @@index([datasetId, gpsLat, gpsLng])
+  @@map("image")
+}
+
+model Tag {
+  id        String    @id @default(cuid())
+  name      String    @unique
+  imageTags ImageTag[]
+
+  @@map("tag")
+}
+
+model ImageTag {
+  imageId String @map("image_id")
+  tagId   String @map("tag_id")
+
+  image Image @relation(fields: [imageId], references: [id], onDelete: Cascade)
+  tag   Tag   @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([imageId, tagId])
+  @@index([tagId, imageId])
+  @@map("image_tag")
+}
+
+model AnnotationSummary {
+  id              String   @id @default(cuid())
+  imageId         String   @unique @map("image_id")
+  hasAnnotations  Boolean  @default(false) @map("has_annotations")
+  classesJson     String?  @map("classes_json") // JSON array of class names
+  annotationType  String?  @map("annotation_type") // bbox, polygon, etc.
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  image Image @relation(fields: [imageId], references: [id], onDelete: Cascade)
+
+  @@map("annotation_summary")
+}
+
+model SavedSlice {
+  id         String   @id @default(cuid())
+  datasetId  String   @map("dataset_id")
+  name       String
+  filterJson String   @map("filter_json")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  dataset Dataset @relation(fields: [datasetId], references: [id], onDelete: Cascade)
+
+  @@map("saved_slice")
+}
