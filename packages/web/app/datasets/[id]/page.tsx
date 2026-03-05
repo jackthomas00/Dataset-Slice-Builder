@@ -2,6 +2,7 @@
 
 import { useParams, useSearchParams, useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { fetchApi, type Dataset, type ImagesResponse } from "@/lib/api";
 import { FilterPanel } from "@/components/FilterPanel";
@@ -9,12 +10,14 @@ import { ImageGrid } from "@/components/ImageGrid";
 import { MapView } from "@/components/MapView";
 import { SaveSliceModal } from "@/components/SaveSliceModal";
 import { ExportButton } from "@/components/ExportButton";
+import { InferenceOverlay } from "@/components/InferenceOverlay";
 
 export default function DatasetPage() {
   const params = useParams();
   const searchParams = useSearchParams();
   const router = useRouter();
   const datasetId = params.id as string;
+  const [selectedImageId, setSelectedImageId] = useState<string | null>(null);
 
   const { data: dataset } = useQuery({
     queryKey: ["dataset", datasetId],
@@ -31,6 +34,24 @@ export default function DatasetPage() {
       fetchApi<ImagesResponse>(`/api/images?${queryString}`),
     enabled: !!datasetId,
   });
+
+  useEffect(() => {
+    if (!imagesData?.images?.length) {
+      setSelectedImageId(null);
+      return;
+    }
+
+    const imageStillVisible = selectedImageId
+      ? imagesData.images.some((img) => img.id === selectedImageId)
+      : false;
+
+    if (!imageStillVisible) setSelectedImageId(imagesData.images[0].id);
+  }, [imagesData, selectedImageId]);
+
+  const selectedImage = useMemo(
+    () => imagesData?.images.find((img) => img.id === selectedImageId) ?? null,
+    [imagesData, selectedImageId]
+  );
 
   return (
     <main style={{ padding: "1rem", maxWidth: 1400, margin: "0 auto" }}>
@@ -143,7 +164,15 @@ export default function DatasetPage() {
           {isLoading ? (
             <p>Loading images...</p>
           ) : (
-            <ImageGrid images={imagesData?.images ?? []} total={imagesData?.total ?? 0} />
+            <>
+              <InferenceOverlay image={selectedImage} />
+              <ImageGrid
+                images={imagesData?.images ?? []}
+                total={imagesData?.total ?? 0}
+                selectedImageId={selectedImageId}
+                onSelectImage={(image) => setSelectedImageId(image.id)}
+              />
+            </>
           )}
         </div>
       </div>

@@ -7,7 +7,18 @@ export async function fetchApi<T>(path: string, options?: RequestInit): Promise<
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({ error: res.statusText }));
-    throw new Error((err as { error?: string }).error || "API error");
+    const body = err as { error?: string; upstream?: { status?: number; body?: unknown } };
+    const msg = body.error || "API error";
+    const upstream = body.upstream;
+    const detail =
+      upstream?.body && typeof upstream.body === "object" && "detail" in upstream.body
+        ? String((upstream.body as { detail: unknown }).detail)
+        : upstream?.body
+          ? JSON.stringify(upstream.body)
+          : upstream?.status
+            ? `Upstream status: ${upstream.status}`
+            : undefined;
+    throw new Error(detail ? `${msg}: ${detail}` : msg);
   }
   return res.json() as Promise<T>;
 }
@@ -50,4 +61,19 @@ export interface SavedSlice {
   name: string;
   filterJson: string;
   createdAt: string;
+}
+
+export interface InferencePrediction {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  className: string;
+  confidence: number;
+}
+
+export interface InferenceResponse {
+  endpoint: string;
+  predictions: InferencePrediction[];
+  raw: unknown;
 }
