@@ -21,7 +21,7 @@ export async function imageRoutes(fastify: FastifyInstance) {
   fastify.get("/", async (request, reply) => {
     const parsed = querySchema.safeParse(request.query);
     if (!parsed.success) {
-      return reply.status(400).send({ error: "Invalid query", details: parsed.error.flatten() });
+      return reply.status(400).send({ error: "Invalid query", details: z.flattenError(parsed.error) });
     }
 
     const {

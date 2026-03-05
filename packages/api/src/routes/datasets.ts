@@ -63,7 +63,7 @@ export async function datasetRoutes(fastify: FastifyInstance) {
   fastify.post("/import", async (request, reply) => {
     const parsed = importSchema.safeParse(request.body);
     if (!parsed.success) {
-      return reply.status(400).send({ error: "Invalid request", details: parsed.error.flatten() });
+      return reply.status(400).send({ error: "Invalid request", details: z.flattenError(parsed.error) });
     }
 
     const { apiKey, workspace, project, name } = parsed.data;

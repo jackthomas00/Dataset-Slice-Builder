@@ -25,7 +25,7 @@ export async function sliceRoutes(fastify: FastifyInstance) {
   fastify.post("/", async (request, reply) => {
     const parsed = createSliceSchema.safeParse(request.body);
     if (!parsed.success) {
-      return reply.status(400).send({ error: "Invalid request", details: parsed.error.flatten() });
+      return reply.status(400).send({ error: "Invalid request", details: z.flattenError(parsed.error) });
     }
 
     const slice = await prisma.savedSlice.create({

@@ -4,6 +4,7 @@ import { healthRoutes } from "./routes/health.js";
 import { datasetRoutes } from "./routes/datasets.js";
 import { imageRoutes } from "./routes/images.js";
 import { sliceRoutes } from "./routes/slices.js";
+import { inferenceRoutes } from "./routes/inference.js";
 
 const fastify = Fastify({ logger: true });
 
@@ -12,6 +13,7 @@ await fastify.register(healthRoutes, { prefix: "/api" });
 await fastify.register(datasetRoutes, { prefix: "/api/datasets" });
 await fastify.register(imageRoutes, { prefix: "/api/images" });
 await fastify.register(sliceRoutes, { prefix: "/api/slices" });
+await fastify.register(inferenceRoutes, { prefix: "/api/inference" });
 
 const start = async () => {
   try {
