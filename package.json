@@ -6,6 +6,7 @@
     "dev": "concurrently \"npm run dev:api\" \"npm run dev:web\"",
     "dev:api": "npm run dev --workspace=api",
     "dev:web": "npm run dev --workspace=web",
+    "dev:docker": "docker compose -f docker-compose.dev.yml up --build",
     "build": "npm run build --workspaces --if-present",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",

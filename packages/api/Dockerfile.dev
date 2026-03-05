@@ -1,0 +1,21 @@
+FROM node:20-alpine
+WORKDIR /app
+
+# Install deps (monorepo)
+COPY package.json package-lock.json* ./
+COPY packages/api/package.json ./packages/api/
+COPY packages/web/package.json ./packages/web/
+RUN npm install
+
+# Prisma
+COPY prisma ./prisma
+ARG DATABASE_URL=postgresql://postgres:postgres@localhost:5432/slicebuilder
+ENV DATABASE_URL=$DATABASE_URL
+RUN npx prisma generate
+
+COPY docker-entrypoint-dev.sh /docker-entrypoint-dev.sh
+RUN chmod +x /docker-entrypoint-dev.sh
+ENTRYPOINT ["/docker-entrypoint-dev.sh"]
+
+EXPOSE 4000
+CMD ["sh", "-c", "cd packages/api && npm run dev"]
