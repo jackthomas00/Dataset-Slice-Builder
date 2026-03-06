@@ -24,9 +24,11 @@ export function FilterPanel({ datasetId }: FilterPanelProps) {
       const next = new URLSearchParams(searchParams.toString());
       if (value) next.set(key, value);
       else next.delete(key);
-      router.push(`?${next.toString()}`);
+      if (key !== "page") next.delete("page");
+      const query = next.toString();
+      router.push(query ? `?${query}` : `/datasets/${datasetId}`);
     },
-    [router, searchParams]
+    [datasetId, router, searchParams]
   );
 
   const timeOfDay = searchParams.get("time_of_day") ?? "";
@@ -35,6 +37,7 @@ export function FilterPanel({ datasetId }: FilterPanelProps) {
   const split = searchParams.get("split") ?? "";
   const hasAnnotations = searchParams.get("has_annotations") ?? "";
   const tagsFilter = searchParams.get("tags") ?? "";
+  const classesFilter = searchParams.get("classes") ?? "";
   const lat = searchParams.get("lat") ?? "";
   const lng = searchParams.get("lng") ?? "";
   const radiusKm = searchParams.get("radius_km") ?? "10";
@@ -69,10 +72,10 @@ export function FilterPanel({ datasetId }: FilterPanelProps) {
             }}
           >
             <option value="">Any</option>
-            <option value="morning">Morning (5–12)</option>
-            <option value="afternoon">Afternoon (12–17)</option>
-            <option value="evening">Evening (17–21)</option>
-            <option value="night">Night (21–5)</option>
+            <option value="morning">Morning (5-12)</option>
+            <option value="afternoon">Afternoon (12-17)</option>
+            <option value="evening">Evening (17-21)</option>
+            <option value="night">Night (21-5)</option>
           </select>
         </label>
 
@@ -161,6 +164,51 @@ export function FilterPanel({ datasetId }: FilterPanelProps) {
 
         <label>
           <span style={{ display: "block", marginBottom: 4, fontSize: 12, color: "var(--muted)" }}>
+            Tags (comma-separated)
+          </span>
+          <input
+            type="text"
+            value={tagsFilter}
+            onChange={(e) => setFilter("tags", e.target.value || null)}
+            placeholder="e.g. warehouse, outdoor"
+            style={{
+              width: "100%",
+              padding: "0.5rem",
+              background: "var(--background)",
+              border: "1px solid var(--border)",
+              borderRadius: 6,
+              color: "inherit",
+            }}
+          />
+          {tags && tags.length > 0 && (
+            <p style={{ fontSize: 11, color: "var(--muted)", marginTop: 4 }}>
+              Available tags: {tags.join(", ")}
+            </p>
+          )}
+        </label>
+
+        <label>
+          <span style={{ display: "block", marginBottom: 4, fontSize: 12, color: "var(--muted)" }}>
+            Classes (comma-separated)
+          </span>
+          <input
+            type="text"
+            value={classesFilter}
+            onChange={(e) => setFilter("classes", e.target.value || null)}
+            placeholder="e.g. person, forklift"
+            style={{
+              width: "100%",
+              padding: "0.5rem",
+              background: "var(--background)",
+              border: "1px solid var(--border)",
+              borderRadius: 6,
+              color: "inherit",
+            }}
+          />
+        </label>
+
+        <label>
+          <span style={{ display: "block", marginBottom: 4, fontSize: 12, color: "var(--muted)" }}>
             GPS Lat
           </span>
           <input
@@ -219,37 +267,9 @@ export function FilterPanel({ datasetId }: FilterPanelProps) {
             }}
           />
         </label>
-        {tags && tags.length > 0 && (
-          <label>
-            <span style={{ display: "block", marginBottom: 4, fontSize: 12, color: "var(--muted)" }}>
-              Tags (comma-separated)
-            </span>
-            <input
-              type="text"
-              value={tagsFilter}
-              onChange={(e) => setFilter("tags", e.target.value || null)}
-              placeholder="e.g. warehouse, outdoor"
-              style={{
-                width: "100%",
-                padding: "0.5rem",
-                background: "var(--background)",
-                border: "1px solid var(--border)",
-                borderRadius: 6,
-                color: "inherit",
-              }}
-            />
-            <p style={{ fontSize: 11, color: "var(--muted)", marginTop: 4 }}>
-              Available: {tags.join(", ")}
-            </p>
-          </label>
-        )}
 
         <button
-          onClick={() => {
-            const next = new URLSearchParams();
-            next.set("dataset_id", datasetId);
-            router.push(`/datasets/${datasetId}`);
-          }}
+          onClick={() => router.push(`/datasets/${datasetId}`)}
           style={{
             padding: "0.5rem",
             background: "transparent",

@@ -41,7 +41,7 @@ export default function SlicesPage() {
           href={`/datasets/${datasetId}`}
           style={{ color: "var(--muted)", textDecoration: "none", fontSize: 14 }}
         >
-          ← Back to {dataset?.name ?? "Dataset"}
+          Back to {dataset?.name ?? "Dataset"}
         </Link>
       </div>
 

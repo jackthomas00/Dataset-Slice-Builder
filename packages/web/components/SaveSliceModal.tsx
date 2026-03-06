@@ -3,15 +3,23 @@
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { fetchApi } from "@/lib/api";
+import type { DatasetFilters } from "@/lib/filters";
 
 interface SaveSliceModalProps {
   datasetId: string;
-  filters: Record<string, string>;
+  filters: DatasetFilters;
+  triggerLabel?: string;
+  initialName?: string;
 }
 
-export function SaveSliceModal({ datasetId, filters }: SaveSliceModalProps) {
+export function SaveSliceModal({
+  datasetId,
+  filters,
+  triggerLabel = "Save Slice",
+  initialName = "",
+}: SaveSliceModalProps) {
   const [open, setOpen] = useState(false);
-  const [name, setName] = useState("");
+  const [name, setName] = useState(initialName);
 
   const queryClient = useQueryClient();
   const mutation = useMutation({
@@ -21,20 +29,23 @@ export function SaveSliceModal({ datasetId, filters }: SaveSliceModalProps) {
         body: JSON.stringify({
           datasetId,
           name: name || "Untitled Slice",
-          filterJson: JSON.stringify(filters),
+          filterJson: filters,
         }),
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["slices", datasetId] });
       setOpen(false);
-      setName("");
+      setName(initialName);
     },
   });
 
   return (
     <>
       <button
-        onClick={() => setOpen(true)}
+        onClick={() => {
+          setName(initialName);
+          setOpen(true);
+        }}
         style={{
           padding: "0.5rem 1rem",
           border: "1px solid var(--border)",
@@ -45,7 +56,7 @@ export function SaveSliceModal({ datasetId, filters }: SaveSliceModalProps) {
           fontSize: 14,
         }}
       >
-        Save Slice
+        {triggerLabel}
       </button>
 
       {open && (

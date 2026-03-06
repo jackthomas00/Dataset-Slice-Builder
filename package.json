@@ -8,6 +8,7 @@
     "dev:web": "npm run dev --workspace=web",
     "dev:docker": "docker compose -f docker-compose.dev.yml up --build",
     "build": "npm run build --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:push": "prisma db push",

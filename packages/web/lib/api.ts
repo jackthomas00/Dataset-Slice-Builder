@@ -1,3 +1,5 @@
+import type { DatasetFilters } from "@/lib/filters";
+
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
 export async function fetchApi<T>(path: string, options?: RequestInit): Promise<T> {
@@ -76,4 +78,42 @@ export interface InferenceResponse {
   endpoint: string;
   predictions: InferencePrediction[];
   raw: unknown;
+}
+
+export interface ReportBucket {
+  label: string;
+  count: number;
+  percentage: number;
+}
+
+export interface RecommendedSlice {
+  id: string;
+  title: string;
+  reason: string;
+  filters: DatasetFilters;
+  matchCount: number;
+}
+
+export interface DatasetHealthReport {
+  summary: {
+    datasetId: string;
+    datasetName: string;
+    imageCount: number;
+    annotatedImageCount: number;
+    annotationCoverageRate: number;
+  };
+  distributions: {
+    splits: ReportBucket[];
+    classes: ReportBucket[];
+    tags: ReportBucket[];
+    timeOfDay: ReportBucket[];
+  };
+  completeness: {
+    missingCapturedAt: number;
+    missingGps: number;
+    missingTags: number;
+    missingAnnotations: number;
+    missingAnnotationSummary: number;
+  };
+  recommendedSlices: RecommendedSlice[];
 }

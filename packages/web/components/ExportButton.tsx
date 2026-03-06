@@ -1,10 +1,11 @@
 "use client";
 
 import type { Image } from "@/lib/api";
+import type { DatasetFilters } from "@/lib/filters";
 
 interface ExportButtonProps {
   datasetId: string;
-  filters: Record<string, string>;
+  filters: DatasetFilters;
   images: Image[];
 }
 

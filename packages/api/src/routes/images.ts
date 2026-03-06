@@ -1,20 +1,22 @@
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { prisma } from "../lib/prisma.js";
+import { buildImageWhere, getPagination, normalizeFilters } from "../lib/filters.js";
 
 const querySchema = z.object({
   dataset_id: z.string().min(1),
   date_from: z.string().optional(),
   date_to: z.string().optional(),
   time_of_day: z.enum(["morning", "afternoon", "evening", "night"]).optional(),
-  lat: z.coerce.number().optional(),
-  lng: z.coerce.number().optional(),
-  radius_km: z.coerce.number().positive().optional(),
-  tags: z.string().optional(), // comma-separated
+  lat: z.union([z.string(), z.number()]).optional(),
+  lng: z.union([z.string(), z.number()]).optional(),
+  radius_km: z.union([z.string(), z.number()]).optional(),
+  tags: z.string().optional(),
+  classes: z.string().optional(),
   split: z.string().optional(),
-  has_annotations: z.enum(["true", "false"]).optional(),
-  page: z.coerce.number().min(1).optional().default(1),
-  limit: z.coerce.number().min(1).max(100).optional().default(24),
+  has_annotations: z.union([z.enum(["true", "false"]), z.boolean()]).optional(),
+  page: z.union([z.string(), z.number()]).optional(),
+  limit: z.union([z.string(), z.number()]).optional(),
 });
 
 export async function imageRoutes(fastify: FastifyInstance) {
@@ -24,65 +26,11 @@ export async function imageRoutes(fastify: FastifyInstance) {
       return reply.status(400).send({ error: "Invalid query", details: z.flattenError(parsed.error) });
     }
 
-    const {
-      dataset_id,
-      date_from,
-      date_to,
-      time_of_day,
-      lat,
-      lng,
-      radius_km,
-      tags,
-      split,
-      has_annotations,
-      page,
-      limit,
-    } = parsed.data;
-
+    const { dataset_id, ...rawFilters } = parsed.data;
+    const filters = normalizeFilters(rawFilters);
+    const { page, limit } = getPagination(filters);
     const skip = (page - 1) * limit;
-
-    const where: Record<string, unknown> = { datasetId: dataset_id };
-
-    if (date_from || date_to) {
-      where.capturedAt = {};
-      if (date_from) (where.capturedAt as Record<string, Date>).gte = new Date(date_from);
-      if (date_to) (where.capturedAt as Record<string, Date>).lte = new Date(date_to);
-    }
-
-    if (time_of_day) {
-      const hourRanges: Record<string, { gte: number; lt: number } | { OR: Array<{ gte?: number; lt?: number }> }> = {
-        morning: { gte: 5, lt: 12 },
-        afternoon: { gte: 12, lt: 17 },
-        evening: { gte: 17, lt: 21 },
-        night: { OR: [{ gte: 21 }, { lt: 5 }] },
-      };
-      where.hourOfDay = hourRanges[time_of_day];
-    }
-
-    if (split) where.split = split;
-    if (has_annotations === "true") {
-      where.annotationSummary = { hasAnnotations: true };
-    } else if (has_annotations === "false") {
-      where.annotationSummary = { hasAnnotations: false };
-    }
-
-    if (tags) {
-      const tagNames = tags.split(",").map((t) => t.trim()).filter(Boolean);
-      if (tagNames.length > 0) {
-        where.tags = {
-          some: {
-            tag: { name: { in: tagNames } },
-          },
-        };
-      }
-    }
-
-    if (lat != null && lng != null && radius_km != null) {
-      const degPerKm = 1 / 111.32;
-      const delta = radius_km * degPerKm;
-      where.gpsLat = { gte: lat - delta, lte: lat + delta };
-      where.gpsLng = { gte: lng - delta, lte: lng + delta };
-    }
+    const where = buildImageWhere(dataset_id, filters);
 
     const [images, total] = await Promise.all([
       prisma.image.findMany({

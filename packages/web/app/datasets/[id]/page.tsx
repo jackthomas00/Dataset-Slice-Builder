@@ -11,6 +11,7 @@ import { MapView } from "@/components/MapView";
 import { SaveSliceModal } from "@/components/SaveSliceModal";
 import { ExportButton } from "@/components/ExportButton";
 import { InferenceOverlay } from "@/components/InferenceOverlay";
+import { filtersToApiQuery, filtersToSearchParams, searchParamsToFilters } from "@/lib/filters";
 
 export default function DatasetPage() {
   const params = useParams();
@@ -24,14 +25,12 @@ export default function DatasetPage() {
     queryFn: () => fetchApi<Dataset>(`/api/datasets/${datasetId}`),
   });
 
-  const filterParams = Object.fromEntries(searchParams.entries());
-  const queryParams = new URLSearchParams({ dataset_id: datasetId, ...filterParams });
-  const queryString = queryParams.toString();
+  const filters = searchParamsToFilters(searchParams);
+  const queryString = filtersToApiQuery(datasetId, filters);
 
   const { data: imagesData, isLoading } = useQuery({
     queryKey: ["images", datasetId, queryString],
-    queryFn: () =>
-      fetchApi<ImagesResponse>(`/api/images?${queryString}`),
+    queryFn: () => fetchApi<ImagesResponse>(`/api/images?${queryString}`),
     enabled: !!datasetId,
   });
 
@@ -55,14 +54,27 @@ export default function DatasetPage() {
 
   return (
     <main style={{ padding: "1rem", maxWidth: 1400, margin: "0 auto" }}>
-      <div style={{ marginBottom: "1rem", display: "flex", gap: "1rem", alignItems: "center" }}>
+      <div style={{ marginBottom: "1rem", display: "flex", gap: "1rem", alignItems: "center", flexWrap: "wrap" }}>
         <Link
           href="/"
           style={{ color: "var(--muted)", textDecoration: "none", fontSize: 14 }}
         >
-          ← Back
+          Back
         </Link>
         <h1 style={{ flex: 1 }}>{dataset?.name ?? "Dataset"}</h1>
+        <Link
+          href={`/datasets/${datasetId}/report`}
+          style={{
+            padding: "0.5rem 1rem",
+            border: "1px solid var(--border)",
+            borderRadius: 6,
+            color: "inherit",
+            textDecoration: "none",
+            fontSize: 14,
+          }}
+        >
+          Health Report
+        </Link>
         <Link
           href={`/datasets/${datasetId}/slices`}
           style={{
@@ -76,8 +88,8 @@ export default function DatasetPage() {
         >
           Saved Slices
         </Link>
-        <SaveSliceModal datasetId={datasetId} filters={filterParams} />
-        <ExportButton datasetId={datasetId} filters={filterParams} images={imagesData?.images ?? []} />
+        <SaveSliceModal datasetId={datasetId} filters={filters} />
+        <ExportButton datasetId={datasetId} filters={filters} images={imagesData?.images ?? []} />
       </div>
 
       <div style={{ display: "flex", gap: "1.5rem", minHeight: 600 }}>
@@ -89,10 +101,14 @@ export default function DatasetPage() {
               <MapView
                 images={imagesData.images}
                 onLatLngChange={(lat, lng, radiusKm) => {
-                  const next = new URLSearchParams(searchParams.toString());
-                  next.set("lat", String(lat));
-                  next.set("lng", String(lng));
-                  next.set("radius_km", String(radiusKm));
+                  const nextFilters = {
+                    ...filters,
+                    lat,
+                    lng,
+                    radius_km: radiusKm,
+                    page: undefined,
+                  };
+                  const next = filtersToSearchParams(nextFilters);
                   router.push(`?${next.toString()}`);
                 }}
               />
@@ -113,14 +129,16 @@ export default function DatasetPage() {
             >
               <span style={{ color: "var(--muted)", fontSize: 14 }}>
                 {imagesData.total} images
-                {imagesData.totalPages > 1 && ` · Page ${imagesData.page} of ${imagesData.totalPages}`}
+                {imagesData.totalPages > 1 && ` � Page ${imagesData.page} of ${imagesData.totalPages}`}
               </span>
               {imagesData.totalPages > 1 && (
                 <div style={{ display: "flex", gap: "0.5rem" }}>
                   <button
                     onClick={() => {
-                      const next = new URLSearchParams(searchParams.toString());
-                      next.set("page", String(Math.max(1, imagesData.page - 1)));
+                      const next = filtersToSearchParams({
+                        ...filters,
+                        page: Math.max(1, imagesData.page - 1),
+                      });
                       router.push(`?${next.toString()}`);
                     }}
                     disabled={imagesData.page <= 1}
@@ -139,8 +157,10 @@ export default function DatasetPage() {
                   </button>
                   <button
                     onClick={() => {
-                      const next = new URLSearchParams(searchParams.toString());
-                      next.set("page", String(Math.min(imagesData.totalPages, imagesData.page + 1)));
+                      const next = filtersToSearchParams({
+                        ...filters,
+                        page: Math.min(imagesData.totalPages, imagesData.page + 1),
+                      });
                       router.push(`?${next.toString()}`);
                     }}
                     disabled={imagesData.page >= imagesData.totalPages}

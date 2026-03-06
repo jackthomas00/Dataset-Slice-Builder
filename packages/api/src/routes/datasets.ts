@@ -2,6 +2,7 @@ import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { prisma } from "../lib/prisma.js";
 import { importDatasetFromRoboflow } from "../services/import.js";
+import { buildReportMarkdown, generateDatasetHealthReport } from "../services/report.js";
 
 const importSchema = z.object({
   apiKey: z.string().min(1),
@@ -41,6 +42,30 @@ export async function datasetRoutes(fastify: FastifyInstance) {
       orderBy: { name: "asc" },
     });
     return tags.map((t) => t.name);
+  });
+
+  fastify.get<{ Params: { id: string } }>("/:id/report", async (request, reply) => {
+    const report = await generateDatasetHealthReport(request.params.id);
+    if (!report) return reply.status(404).send({ error: "Dataset not found" });
+    return report;
+  });
+
+  fastify.get<{ Params: { id: string }; Querystring: { format?: string } }>("/:id/report/export", async (request, reply) => {
+    const report = await generateDatasetHealthReport(request.params.id);
+    if (!report) return reply.status(404).send({ error: "Dataset not found" });
+
+    const baseName = report.summary.datasetName.replace(/\s+/g, "_").toLowerCase();
+    if (request.query.format === "md") {
+      const markdown = buildReportMarkdown(report, `/datasets/${request.params.id}`);
+      return reply
+        .header("Content-Type", "text/markdown; charset=utf-8")
+        .header("Content-Disposition", `attachment; filename="${baseName}_health_report.md"`)
+        .send(markdown);
+    }
+
+    return reply
+      .header("Content-Disposition", `attachment; filename="${baseName}_health_report.json"`)
+      .send(report);
   });
 
   fastify.get<{ Params: { id: string } }>("/:id", async (request, reply) => {
