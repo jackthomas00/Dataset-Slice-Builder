@@ -129,7 +129,7 @@ export default function DatasetPage() {
             >
               <span style={{ color: "var(--muted)", fontSize: 14 }}>
                 {imagesData.total} images
-                {imagesData.totalPages > 1 && ` · Page ${imagesData.page} of ${imagesData.totalPages}`}
+                {imagesData.totalPages > 1 && ` - Page ${imagesData.page} of ${imagesData.totalPages}`}
               </span>
               {imagesData.totalPages > 1 && (
                 <div style={{ display: "flex", gap: "0.5rem" }}>
